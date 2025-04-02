@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -24,12 +24,17 @@ export default function Board() {
     setAiThinking,
   } = useGameStore();
 
+  // Thêm trạng thái để lưu trữ nước đi của người chơi và AI
+  const [playerMove, setPlayerMove] = useState<[number, number] | null>(null);
+  const [aiMove, setAiMove] = useState<[number, number] | null>(null);
+
   const handlePress = useCallback(
     async (row: number, col: number) => {
       if (board[row][col] !== null || winner || isAiThinking) return;
 
       // Player's move
       makeMove(row, col);
+      setPlayerMove([row, col]); // Lưu nước đi của người chơi
 
       // AI's move (if in PvE mode)
       if (gameMode.startsWith('pve-')) {
@@ -62,50 +67,10 @@ export default function Board() {
                 break;
             }
 
-            // Kiểm tra kỹ lưỡng nước đi của AI
-            if (
-              aiMove[0] >= 0 &&
-              aiMove[0] < BOARD_SIZE &&
-              aiMove[1] >= 0 &&
-              aiMove[1] < BOARD_SIZE &&
-              currentBoard[aiMove[0]][aiMove[1]] === null
-            ) {
-              // Thêm độ trễ nhỏ để người dùng thấy được thanh loading
-              setTimeout(() => {
-                makeMove(aiMove[0], aiMove[1]);
-                setAiThinking(false);
-              }, 300);
-            } else {
-              console.error(
-                `AI returned invalid move: [${aiMove}], finding random empty cell instead`
-              );
-
-              // Tìm một ô trống ngẫu nhiên nếu AI trả về nước đi không hợp lệ
-              const emptyPositions: [number, number][] = [];
-              for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                  if (currentBoard[r][c] === null) {
-                    emptyPositions.push([r, c]);
-                  }
-                }
-              }
-
-              if (emptyPositions.length > 0) {
-                const randomMove =
-                  emptyPositions[
-                    Math.floor(Math.random() * emptyPositions.length)
-                  ];
-                console.log(`Using fallback random move: [${randomMove}]`);
-                setTimeout(() => {
-                  makeMove(randomMove[0], randomMove[1]);
-                  setAiThinking(false);
-                }, 300);
-              } else {
-                setAiThinking(false);
-              }
-            }
-          } catch (error) {
-            console.error('Error in AI processing:', error);
+            setAiMove(aiMove); // Lưu nước đi của AI
+            // Cập nhật bàn cờ với nước đi của AI
+            makeMove(aiMove[0], aiMove[1]);
+          } finally {
             setAiThinking(false);
           }
         }, 50);
@@ -124,30 +89,43 @@ export default function Board() {
 
   const renderCell = useCallback(
     (row: number, col: number) => {
-      const value: CellState = board[row][col];
+      let cellStyle = styles.cell;
+
+      // Kiểm tra ô của người chơi
+      if (playerMove && playerMove[0] === row && playerMove[1] === col) {
+        cellStyle = { ...cellStyle, backgroundColor: 'lightblue' }; // Màu cho ô của người chơi
+      }
+
+      // Kiểm tra ô của AI
+      if (aiMove && aiMove[0] === row && aiMove[1] === col) {
+        cellStyle = { ...cellStyle, backgroundColor: 'lightgreen' }; // Màu cho ô của AI
+      }
 
       return (
         <TouchableOpacity
           key={`${row}-${col}`}
-          style={styles.cell}
+          style={cellStyle}
           onPress={() => handlePress(row, col)}
           disabled={
             winner !== null ||
             (gameMode.startsWith('pve-') && currentPlayer === 'white')
           }
         >
-          {value && (
+          {board[row][col] && (
             <View
               style={[
                 styles.stone,
-                { backgroundColor: value === 'black' ? '#000' : '#fff' },
+                {
+                  backgroundColor:
+                    board[row][col] === 'black' ? '#000' : '#fff',
+                },
               ]}
             />
           )}
         </TouchableOpacity>
       );
     },
-    [board, handlePress, winner, gameMode, currentPlayer]
+    [board, handlePress, winner, gameMode, currentPlayer, playerMove, aiMove]
   );
 
   return (
