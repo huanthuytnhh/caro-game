@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RotateCcw, ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -8,35 +14,58 @@ import useGameStore from '@/store/gameStore';
 
 export default function PvPScreen() {
   const router = useRouter();
-  const { currentPlayer, winner, gameMode, initializeBoard, undoMove } = useGameStore();
+  const {
+    currentPlayer,
+    winner,
+    gameMode,
+    initializeBoard,
+    undoMove,
+    isAiThinking,
+  } = useGameStore();
 
   const getGameModeText = () => {
     switch (gameMode) {
-      case 'pvp': return 'Player vs Player';
-      case 'pve-easy': return 'vs AI (Easy)';
-      case 'pve-medium': return 'vs AI (Medium)';
-      case 'pve-hard': return 'vs AI (Hard)';
-      default: return '';
+      case 'pvp':
+        return 'Player vs Player';
+      case 'pve-easy':
+        return 'vs AI (Easy)';
+      case 'pve-medium':
+        return 'vs AI (Medium)';
+      case 'pve-hard':
+        return 'vs AI (Hard)';
+      default:
+        return '';
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => router.back()}
         >
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.gameMode}>{getGameModeText()}</Text>
-        <Text style={styles.status}>
-          {winner
-            ? winner === 'draw'
-              ? "It's a draw!"
-              : `${winner.charAt(0).toUpperCase() + winner.slice(1)} wins!`
-            : `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s turn`}
-        </Text>
+        <View style={styles.statusContainer}>
+          <Text style={styles.status}>
+            {winner
+              ? winner === 'draw'
+                ? "It's a draw!"
+                : `${winner.charAt(0).toUpperCase() + winner.slice(1)} wins!`
+              : `${
+                  currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)
+                }'s turn`}
+          </Text>
+          {isAiThinking && (
+            <ActivityIndicator
+              size="small"
+              color="#fff"
+              style={styles.statusIndicator}
+            />
+          )}
+        </View>
       </View>
 
       <Board />
@@ -87,10 +116,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 10,
   },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   status: {
     fontSize: 18,
     color: '#71717a',
     marginBottom: 20,
+  },
+  statusIndicator: {
+    marginLeft: 10,
   },
   controls: {
     flexDirection: 'row',
